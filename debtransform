@@ -293,6 +293,11 @@ sub dofile_quilt {
   use Cwd qw(cwd);
   use File::Spec;
   use File::Basename;
+  use File::Temp qw(tempdir);
+  
+  my $tmpdir = File::Temp->newdir();
+  my $tempdirname = $tmpdir->dirname;
+
   my $dir = cwd;
 
   my ($input_file_path, $output_file_path, $rename_file_path, $origtarfile) = @_;
@@ -300,9 +305,11 @@ sub dofile_quilt {
   my $input_file_path_relative = dorelativepath($input_file_path);
   my $output_file_path_relative = dorelativepath($output_file_path);
 
+  my $path_for_logging = $input_file_path_relative;
+
   # Catch and patch changelog
   if (basename($input_file_path_relative) eq 'debian.changelog') {
-    my $input_file_path_patched = "${input_file_path}.patched";
+    my $input_file_path_patched = "${tempdirname}/debian.changelog.patched";
 
     open my $in,  '<',  $input_file_path         or die "Can't read original changelog file: $!\n";
     open my $out, '>',  $input_file_path_patched or die "Can't write patched changelog file: $!\n";
@@ -315,9 +322,10 @@ sub dofile_quilt {
 
     $input_file_path = $input_file_path_patched;
     $input_file_path_relative = dorelativepath($input_file_path);
+    $path_for_logging = $input_file_path;
   }
 
-  print "Add file '$input_file_path_relative'\n";
+  print "Add file '$path_for_logging'\n";
   print "    to debian quilt tar file '$output_file_path_relative'\n";
   print "    with internal path       '$rename_file_path'\n";
 
