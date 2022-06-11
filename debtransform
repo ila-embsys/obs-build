@@ -233,7 +233,8 @@ sub dotar_quilt {
 
   # Looking for changelog in tar
   my $changelog_path_in_tar = 'debian/changelog';
-  if (system("tar -tf \"${input_file_path_without_ext}.tar\" $changelog_path_in_tar") == 0){
+  if (system("tar -tf \"${input_file_path_without_ext}.tar\" $changelog_path_in_tar 2> /dev/null") == 0){
+    print "Found '$changelog_path_in_tar' in '${input_file_path_without_ext}.tar";
     use File::Temp qw(tempdir);
     my $tmpdir = File::Temp->newdir();
     my $tempdirname = $tmpdir->dirname;
@@ -247,10 +248,10 @@ sub dotar_quilt {
     open my $in,  '<',  $changelog_file_path         or die "Can't read original changelog file: $!\n";
     open my $out, '>',  $changelog_file_path_patched or die "Can't write patched changelog file: $!\n";
 
-    my @lines = do { local $/; <$in> };
+    chomp(my @lines = <$in>);
     my @new_lines = dopatch_changelog($origtarfile->{'version'}, @lines);
 
-    print $out @new_lines;
+    print $out "$_\n" for @new_lines;
     close $out;
 
     # Copy tar for patching
@@ -291,6 +292,7 @@ sub dofile {
 sub dofile_quilt {
   use Cwd qw(cwd);
   use File::Spec;
+  use File::Basename;
   my $dir = cwd;
 
   my ($input_file_path, $output_file_path, $rename_file_path, $origtarfile) = @_;
@@ -299,16 +301,16 @@ sub dofile_quilt {
   my $output_file_path_relative = dorelativepath($output_file_path);
 
   # Catch and patch changelog
-  if ($input_file_path_relative eq 'debian.changelog') {
+  if (basename($input_file_path_relative) eq 'debian.changelog') {
     my $input_file_path_patched = "${input_file_path}.patched";
 
     open my $in,  '<',  $input_file_path         or die "Can't read original changelog file: $!\n";
     open my $out, '>',  $input_file_path_patched or die "Can't write patched changelog file: $!\n";
 
-    my @lines = do { local $/; <$in> };
+    chomp(my @lines = <$in>);
     my @new_lines = dopatch_changelog($origtarfile->{'version'}, @lines);
 
-    print $out @new_lines;
+    print $out "$_\n" for @new_lines;
     close $out;
 
     $input_file_path = $input_file_path_patched;
