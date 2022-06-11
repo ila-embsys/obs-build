@@ -248,7 +248,7 @@ sub dotar_quilt {
   # Looking for changelog in tar
   my $changelog_path_in_tar = 'debian/changelog';
   my $is_changelog_in_tar = (system("tar -tf \"${tar_for_concatination_path}\" $changelog_path_in_tar > /dev/null 2>&1") == 0);
-  
+
   if ($is_changelog_in_tar){
     print "Found '$changelog_path_in_tar' in '${tar_for_concatination_path}', extract to '$tempdirname'.\n";
     system("tar xf \"$input_file_path\" --directory $tempdirname $changelog_path_in_tar") == 0
@@ -298,7 +298,7 @@ sub dofile_quilt {
   use File::Spec;
   use File::Basename;
   use File::Temp qw(tempdir);
-  
+
   my $tmpdir = File::Temp->newdir();
   my $tempdirname = $tmpdir->dirname;
 
