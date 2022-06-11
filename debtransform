@@ -211,6 +211,12 @@ sub dotar {
 }
 
 sub dotar_quilt {
+  use File::Temp qw(tempdir);
+  use File::Basename;
+
+  my $tmpdir = File::Temp->newdir();
+  my $tempdirname = $tmpdir->dirname;
+
   my ($input_file_path, $output_file_path, $origtarfile) = @_;
 
   my $input_file_path_relative = dorelativepath($input_file_path);
@@ -223,24 +229,30 @@ sub dotar_quilt {
   my $input_file_path_without_ext = $list[0];
   my $ext = $list[1];
 
+  my $decompress_src = "$input_file_path";
+  my $input_file_name = basename($input_file_path_without_ext);
+  my $decompress_dst = "${tempdirname}/${input_file_name}.tar";
+
+  # print "Decompress '$decompress_src' to '$decompress_dst' for concatenation\n";
+
   if (($ext eq ".tgz") or ($ext eq ".tar.gz")) {
-      system("gzip -dk \"$input_file_path\"") == 0 || die("Can not unpack gzip archive '$input_file_path': $!\n");
+      system("gzip -dck \"$decompress_src\" > \"$decompress_dst\"") == 0 || die("Can not unpack gzip archive '$decompress_src': $!\n");
   } elsif (($ext eq ".tar.xz")) {
-      system("xz -dk \"$input_file_path\"") == 0 || die("Can not unpack xz archive '$input_file_path': $!\n");
+      system("xz -dck \"$decompress_src\" > \"$decompress_dst\"") == 0 || die("Can not unpack xz archive '$decompress_src': $!\n");
   } elsif (($ext eq ".tar.bz2")) {
-      system("bzip2 -dk \"$input_file_path\"") == 0 || die("Can not unpack bzip2 archive '$input_file_path': $!\n");
+      system("bzip2 -dck \"$decompress_src\" > \"$decompress_dst\"") == 0 || die("Can not unpack bzip2 archive '$decompress_src': $!\n");
   }
+
+  my $tar_for_concatination_path = $decompress_dst;
 
   # Looking for changelog in tar
   my $changelog_path_in_tar = 'debian/changelog';
-  if (system("tar -tf \"${input_file_path_without_ext}.tar\" $changelog_path_in_tar 2> /dev/null") == 0){
-    print "Found '$changelog_path_in_tar' in '${input_file_path_without_ext}.tar";
-    use File::Temp qw(tempdir);
-    my $tmpdir = File::Temp->newdir();
-    my $tempdirname = $tmpdir->dirname;
-
+  my $is_changelog_in_tar = (system("tar -tf \"${tar_for_concatination_path}\" $changelog_path_in_tar > /dev/null 2>&1") == 0);
+  
+  if ($is_changelog_in_tar){
+    print "Found '$changelog_path_in_tar' in '${tar_for_concatination_path}', extract to '$tempdirname'.\n";
     system("tar xf \"$input_file_path\" --directory $tempdirname $changelog_path_in_tar") == 0
-      || die("Can not get file '$changelog_path_in_tar' from tar '$input_file_path': $!\n");
+      || die("Can not extract file '$changelog_path_in_tar' from tar '$input_file_path': $!\n");
 
     # Patch changelog
     my $changelog_file_path = "$tempdirname/$changelog_path_in_tar";
@@ -254,28 +266,20 @@ sub dotar_quilt {
     print $out "$_\n" for @new_lines;
     close $out;
 
-    # Copy tar for patching
-    use File::Copy;
-    use File::Basename;
-    my $tar_name_with_changelog = basename($input_file_path);
-    my $tar_name_with_changelog_patched = "${tar_name_with_changelog}.patched";
+    # Replace original changelog with patched
+    unlink($changelog_file_path);
+    rename($changelog_file_path_patched, $changelog_file_path);
 
-    my $tar_path_with_changelog = $input_file_path;
-    my $tar_path_with_changelog_patched = "${tempdirname}/${tar_name_with_changelog_patched}";
+    print "Update tar '$tar_for_concatination_path' due to changelog '$changelog_file_path' patched.\n";
+    # Add changelog file to tar relative to tempdirname
+    system("tar -C \"$tempdirname\" -uf \"$tar_for_concatination_path\" \"$changelog_path_in_tar\"") == 0
+      || die("Can not update tar '$tar_for_concatination_path' with file '$changelog_file_path': $!\n");
 
-    copy($tar_path_with_changelog, $tar_path_with_changelog_patched) or die "Can not copy tar archive with changelog for patching: $!\n";
-
-    system("tar -uf \"$tar_path_with_changelog_patched\" $changelog_file_path_patched") == 0
-      || die("Can not update tar '$tar_path_with_changelog_patched' with file '$changelog_file_path_patched': $!\n");
-
-    # Use patched file instead of original
-    system("tar --concatenate -f $output_file_path $tar_path_with_changelog_patched");
-    unlink("$tar_path_with_changelog_patched");
-    print "Added patched tar '$tar_path_with_changelog_patched' instead of original '$input_file_path_relative' due to changelog patched.\n"
-  } else {
-    system("tar --concatenate -f $output_file_path ${input_file_path_without_ext}.tar");
-    unlink("${input_file_path_without_ext}.tar");
+    unlink($changelog_file_path);
   }
+
+  system("tar --concatenate -f \"$output_file_path\" \"${tar_for_concatination_path}\"");
+  unlink("${tar_for_concatination_path}");
 }
 
 sub dofile {
