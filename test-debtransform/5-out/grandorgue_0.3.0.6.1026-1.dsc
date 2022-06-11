@@ -15,4 +15,3 @@ Checksums-Sha256:
 Files:
  7e72e6c31c2af52c227ce4c4c6ee3952 655 grandorgue_0.3.0.6.1026.orig.tar.gz
  89cf42cc4c155c8d896e7ad2bca33c5f 573 grandorgue_0.3.0.6.1026-1.debian.tar.gz
-
