@@ -120,13 +120,13 @@ sub listtar {
 }
 
 sub dopatch_changelog {
-    my (@content, $newversion) = @_;
+    my ($version_new, @content) = @_;
     my $firstline = $content[0];
     my $version = $firstline;
     $version =~ s/.*\((.*)\).*/$1/g;
-    if ($version ne $newversion) {
+    if ($version ne $version_new) {
       print "Found changelog with the last entry version not equal to build package version ($version).\n";
-      $firstline =~ s/\(.*\)/($newversion)/g;
+      $firstline =~ s/\(.*\)/($version_new)/g;
       my $date = `date -R`;
       if (defined($ENV{SOURCE_DATE_EPOCH})) {
         $date = strftime("%a, %d %b %Y %T +0000", gmtime($ENV{SOURCE_DATE_EPOCH}));
@@ -134,7 +134,7 @@ sub dopatch_changelog {
       chomp($date);
       my @newcontent = ($firstline, "", "  * version number update by debtransform", "", " -- debtransform <build\@opensuse.org>  ".$date, "");
       push(@newcontent, @content);
-      print "New entry with updated version number added ($newversion).\n";
+      print "New entry with updated version number added ($version_new).\n";
       @content = @newcontent;
     }
     return @content;
@@ -166,7 +166,7 @@ sub dodiff {
       }
   }
   if ($newname eq $origtarfile->{'tardir'}."/debian/changelog") {
-    @content = dopatch_changelog(@content, $origtarfile->{'version'});
+    @content = dopatch_changelog($origtarfile->{'version'}, @content);
   }
   return unless @content;
   print DIFF "--- $oldname\n";
@@ -248,7 +248,7 @@ sub dotar_quilt {
     open my $out, '>',  $changelog_file_path_patched or die "Can't write patched changelog file: $!\n";
 
     my @lines = do { local $/; <$in> };
-    my @new_lines = dopatch_changelog(@lines, $origtarfile->{'version'});
+    my @new_lines = dopatch_changelog($origtarfile->{'version'}, @lines);
 
     print $out @new_lines;
     close $out;
@@ -306,7 +306,7 @@ sub dofile_quilt {
     open my $out, '>',  $input_file_path_patched or die "Can't write patched changelog file: $!\n";
 
     my @lines = do { local $/; <$in> };
-    my @new_lines = dopatch_changelog(@lines, $origtarfile->{'version'});
+    my @new_lines = dopatch_changelog($origtarfile->{'version'}, @lines);
 
     print $out @new_lines;
     close $out;
