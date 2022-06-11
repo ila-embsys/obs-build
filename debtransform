@@ -125,7 +125,7 @@ sub dopatch_changelog {
     my $version = $firstline;
     $version =~ s/.*\((.*)\).*/$1/g;
     if ($version ne $newversion) {
-      print "Found changelog with the last entry version not equal to build package version ($version).";
+      print "Found changelog with the last entry version not equal to build package version ($version).\n";
       $firstline =~ s/\(.*\)/($newversion)/g;
       my $date = `date -R`;
       if (defined($ENV{SOURCE_DATE_EPOCH})) {
@@ -134,7 +134,7 @@ sub dopatch_changelog {
       chomp($date);
       my @newcontent = ($firstline, "", "  * version number update by debtransform", "", " -- debtransform <build\@opensuse.org>  ".$date, "");
       push(@newcontent, @content);
-      print "New entry with updated version number added ($newversion).";
+      print "New entry with updated version number added ($newversion).\n";
       @content = @newcontent;
     }
     return @content;
@@ -244,8 +244,8 @@ sub dotar_quilt {
     # Patch changelog
     my $changelog_file_path = "$tempdirname/$changelog_path_in_tar";
     my $changelog_file_path_patched = "${changelog_file_path}.patched";
-    open my $in,  '<',  $changelog_file_path         or die "Can't read original changelog file: $!";
-    open my $out, '>',  $changelog_file_path_patched or die "Can't write patched changelog file: $!";
+    open my $in,  '<',  $changelog_file_path         or die "Can't read original changelog file: $!\n";
+    open my $out, '>',  $changelog_file_path_patched or die "Can't write patched changelog file: $!\n";
 
     my @lines = do { local $/; <$in> };
     my @new_lines = dopatch_changelog(@lines, $origtarfile->{'version'});
@@ -262,7 +262,7 @@ sub dotar_quilt {
     my $tar_path_with_changelog = $input_file_path;
     my $tar_path_with_changelog_patched = "${tempdirname}/${tar_name_with_changelog_patched}";
 
-    copy($tar_path_with_changelog, $tar_path_with_changelog_patched) or die "Can not copy tar archive with changelog for patching: $!";
+    copy($tar_path_with_changelog, $tar_path_with_changelog_patched) or die "Can not copy tar archive with changelog for patching: $!\n";
 
     system("tar -uf \"$tar_path_with_changelog_patched\" $changelog_file_path_patched") == 0
       || die("Can not update tar '$tar_path_with_changelog_patched' with file '$changelog_file_path_patched': $!\n");
@@ -270,7 +270,7 @@ sub dotar_quilt {
     # Use patched file instead of original
     system("tar --concatenate -f $output_file_path $tar_path_with_changelog_patched");
     unlink("$tar_path_with_changelog_patched");
-    print "Added patched tar '$tar_path_with_changelog_patched' instead of original '$input_file_path_relative' due to changelog patched."
+    print "Added patched tar '$tar_path_with_changelog_patched' instead of original '$input_file_path_relative' due to changelog patched.\n"
   } else {
     system("tar --concatenate -f $output_file_path ${input_file_path_without_ext}.tar");
     unlink("${input_file_path_without_ext}.tar");
@@ -302,8 +302,8 @@ sub dofile_quilt {
   if ($input_file_path_relative eq 'debian.changelog') {
     my $input_file_path_patched = "${input_file_path}.patched";
 
-    open my $in,  '<',  $input_file_path         or die "Can't read original changelog file: $!";
-    open my $out, '>',  $input_file_path_patched or die "Can't write patched changelog file: $!";
+    open my $in,  '<',  $input_file_path         or die "Can't read original changelog file: $!\n";
+    open my $out, '>',  $input_file_path_patched or die "Can't write patched changelog file: $!\n";
 
     my @lines = do { local $/; <$in> };
     my @new_lines = dopatch_changelog(@lines, $origtarfile->{'version'});
