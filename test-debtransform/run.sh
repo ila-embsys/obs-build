@@ -25,12 +25,33 @@ function run
 		    debdiff $4/$NAME out/$NAME
 		    RES=$?
 		    if [ $RES != 0 ]; then
-			    fail $RES
+			    fail $1
 		    fi
 		    ;;
 	    esac
 	done
     fi
+}
+
+function try_build
+{
+	rm -rf out
+    mkdir out
+
+	DIR=$1
+
+	cd out
+	# dpkg-source -x *.dsc
+	dpkg-source -x ../$DIR/*.dsc
+	BUILD=$(ls -d *|head -n 1)
+	cd $BUILD
+	debuild -b -uc -us || ERROR=1
+	# dpkg-buildpackage -b -us -uc || ERROR=1
+	cd ../../
+	if [ "$ERROR" != "0" ]; then
+		fail $BUILD
+    fi
+	echo "$DIR ($BUILD): OK"
 }
 
 export SOURCE_DATE_EPOCH=1591490034
@@ -46,3 +67,7 @@ run 6 grandorgue.dsc 0 6-out
 run "$(realpath 4)" grandorgue.dsc 0 "$(realpath 4-out)"
 run "$(realpath 5)" grandorgue.dsc 0 "$(realpath 5-out)"
 run "$(realpath 6)" grandorgue.dsc 0 "$(realpath 6-out)"
+
+try_build 4-out
+try_build 5-out
+try_build 6-out

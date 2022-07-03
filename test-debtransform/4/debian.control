@@ -1,0 +1,10 @@
+Source: grandorgue
+Section: devel
+Priority: optional
+Maintainer: test <test@example.com>
+Build-Depends: debhelper (>= 9)
+Standards-Version: 3.7.2
+
+Package: grandorgue
+Architecture: all
+Description: Test package
